@@ -1,0 +1,3 @@
+[ ] Titulo de la tarea
+Prioridad: media
+Notas: ...

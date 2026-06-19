@@ -1,0 +1,17 @@
+{
+  "name": "vulnerable-todo-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicacion intencionalmente vulnerable para el ramo Desarrollo Seguro de Software (UCN). USO LOCAL Y EDUCATIVO UNICAMENTE.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test __tests__/"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

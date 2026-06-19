@@ -1,0 +1,62 @@
+name: security
+
+# Pipeline DevSecOps. Usa ZAP FULL-SCAN (activo) para detectar tambien las
+# vulnerabilidades de inyeccion (XSS, Path Traversal, Open Redirect), que el
+# baseline pasivo NO encuentra.
+# Version inicial: REPORTA sin bloquear. En remediacion, quita los
+# continue-on-error y pon fail_action: true.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  appsec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci || npm install
+
+      # ---- SAST ----
+      - name: Semgrep (SAST)
+        continue-on-error: true   # quitar en remediacion
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/javascript p/react p/owasp-top-ten
+
+      # ---- Dependencias ----
+      - name: npm audit
+        continue-on-error: true   # quitar en remediacion
+        run: npm audit --audit-level=high
+
+      # ---- Build + arranque ----
+      - name: Build
+        run: npm run build
+
+      - name: Start app
+        run: |
+          npm start &
+          npx --yes wait-on http://localhost:3000 --timeout 60000
+
+      # ---- Tests propios (red de seguridad) ----
+      - name: Tests de seguridad
+        continue-on-error: true   # quitar en remediacion
+        run: npm test
+
+      # ---- DAST: ZAP FULL SCAN (activo) ----
+      - name: OWASP ZAP Full Scan
+        continue-on-error: true   # poner fail_action: true en remediacion
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: 'http://localhost:3000'
+
+# Nota de red: si el contenedor de ZAP no alcanza localhost:3000 en tu runner,
+# corre ZAP directamente:
+#   docker run --network=host -t ghcr.io/zaproxy/zaproxy \
+#     zap-full-scan.py -t http://localhost:3000 -r reporte.html
