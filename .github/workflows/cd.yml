@@ -1,0 +1,78 @@
+name: CD — Despliegue Continuo
+
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build y publicar imagen
+    runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+
+      - name: Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Extraer metadatos (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-
+
+
+      - name: Build y push de imagen
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          #provenance: true
+
+  deploy-staging:
+    name: Desplegar en Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+    steps:
+      - name: Deploy a staging
+        run: |
+          echo 'Desplegando versión ${{ github.ref_name }} en staging...'
+          # Aquí va el comando real de despliegue:
+          # kubectl apply -f k8s/staging/
+          # aws ecs update-service --cluster staging ...
+
+
+  deploy-production:
+    name: Desplegar en Producción
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+    steps:
+      - name: Deploy a producción
+        run: |
+          echo 'Desplegando versión ${{ github.ref_name }} en producción...'
