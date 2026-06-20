@@ -28,7 +28,7 @@ jobs:
       - run: npm ci
 
       - name: Validate dependencies
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=high
 
       - name: Build application
         run: npm run build
